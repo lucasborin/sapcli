@@ -591,6 +591,41 @@ def print_acoverage_jacoco(root_node, statement_responses, args, console):
     console.printout('</report>')
 
 
+def print_acoverage_cobertura(root_node, console):
+    """Print results of ACoverage to console in the form of Cobertura"""
+
+    console.printout('<?xml version="1.0" encoding="UTF-8"?>')
+    console.printout('<!DOCTYPE coverage SYSTEM "http://cobertura.sourceforge.net/xml/coverage-04.dtd">')
+        
+    console.printout('<coverage line-rate="0" branch-rate="0" lines-covered="0" lines-valid="0" branches-covered="0" branches-valid="0" complexity="0" timestamp="0" version="">')
+    console.printout('<packages>')
+
+    for package in root_node.nodes:
+        console.printout(f'<package name="{package.name}" line-rate="{package.coverages[2].executed/package.coverages[2].total}" branch-rate="{package.coverages[0].executed/package.coverages[0].total}" complexity="0.0">')
+        console.printout('<classes>')
+        
+        for clas in package.nodes:
+            console.printout(f'<class name="{clas.name}" filename="{clas.name}" line-rate="{clas.coverages[2].executed/clas.coverages[2].total}" branch-rate="{clas.coverages[0].executed/clas.coverages[0].total}" complexity="0.0">')
+            console.printout('<methods>')
+
+            for method in clas.nodes:
+                console.printout(f'<method name="{method.name}" signature="" line-rate="{method.coverages[2].executed/method.coverages[2].total}" branch-rate="{method.coverages[0].executed/method.coverages[0].total}" complexity="0.0">')
+                console.printout('<lines>')
+                console.printout(f'<line number="" hits="{method.coverages[2].executed}"/>')
+                console.printout('</line>')
+                console.printout('</method>')
+                
+            console.printout('</methods>')
+            console.printout('<lines/>')
+            console.printout('</class>')
+
+        console.printout('</classes>')
+        console.printout('</package>')
+
+    console.printout('</packages>')
+    console.printout('</coverage>')
+
+
 def get_acoverage_statements(connection, coverage_identifier, statement_uris):
     """Retrieve and parse acoverage statements for specific coverage identifier"""
 
@@ -685,7 +720,7 @@ def print_aunit_output(args, aunit_response, aunit_parsed_response):
 def print_acoverage_output(args, acoverage_response, root_node, statement_responses):
     """Prints ACoverage output in selected format and console"""
 
-    if args.coverage_output not in ('raw', 'human', 'jacoco'):
+    if args.coverage_output not in ('raw', 'human', 'jacoco', 'cobertura'):
         raise SAPCliError(f'Unsupported output type: {args.coverage_output}')
 
     coverage_file = None
@@ -705,6 +740,8 @@ def print_acoverage_output(args, acoverage_response, root_node, statement_respon
         print_acoverage_human(root_node, console)
     elif args.coverage_output == 'jacoco':
         print_acoverage_jacoco(root_node, statement_responses, args, console)
+    elif args.coverage_output == 'cobertura':
+        print_acoverage_cobertura(root_node, console)
 
     if coverage_file is not None:
         coverage_file.close()
@@ -729,7 +766,7 @@ class ResultOptions(Enum):
                            ResultOptions.ALL.value],
                        default=ResultOptions.ONLY_UNIT.value
                        )
-@CommandGroup.argument('--coverage-output', choices=['raw', 'human', 'jacoco'], default='human')
+@CommandGroup.argument('--coverage-output', choices=['raw', 'human', 'jacoco', 'cobertura'], default='human')
 @CommandGroup.argument('--coverage-filepath', default=None, type=str)
 @CommandGroup.command()
 def run(connection, args):
